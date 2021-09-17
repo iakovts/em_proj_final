@@ -63,18 +63,28 @@ class DimensionsSpher:
 @dataclass(eq=False)
 class DimBase:
     # All dimensions in m
-    oven: DimensionsRect = field(default=DimensionsRect(x=.17, y=.17, z=.15))
+    oven: DimensionsRect = field(default=DimensionsRect(x=0.17, y=0.17, z=0.15))
     # wg: DimensionsRect = field(default=DimensionsRect(x=4.6, y=9.2, z=4.9))
-    burger: DimensionsSpher = field(default=DimensionsSpher(r=.04, z=.02))
-    potato1: DimensionsSpher = field(default=DimensionsSpher(r=.02))
-    potato2: DimensionsSpher = field(default=DimensionsSpher(r=.02))
-    plate: DimensionsSpher = field(default=DimensionsSpher(r=.07, z=.01))
+    burger: DimensionsSpher = field(default=DimensionsSpher(r=0.04, z=0.02))
+    potato1: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
+    potato2: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
+    plate: DimensionsSpher = field(default=DimensionsSpher(r=0.07, z=0.01))
 
     def __post_init__(self):
-        self.plate.center = (self.oven.x / 2, self.oven.y / 2)
-        self.burger.center = (self.plate.center[0] - 0.025, self.plate.center[1])
-        self.potato1.center = (self.plate.center[0] + 0.035, self.plate.center[1] + 0.025)
-        self.potato2.center = (self.plate.center[0] + 0.035, self.plate.center[1] - 0.025)
+        self.plate.center = (round(self.oven.x / 2, 4), round(self.oven.y / 2, 4))
+        self.burger.center = (
+            round(self.plate.center[0] - 0.025, 4),
+            round(self.plate.center[1], 4),
+        )
+        self.potato1.center = (
+            round(self.plate.center[0] + 0.035, 4),
+            round(self.plate.center[1] + 0.025, 4),
+        )
+        self.potato2.center = (
+            round(self.plate.center[0] + 0.035, 4),
+            round(self.plate.center[1] - 0.025, 4),
+        )
+
 
 @dataclass(eq=False)
 class Constants:
@@ -87,12 +97,19 @@ class Constants:
         self.epsz = 1.0 / (self.c * self.c * self.muz)
 
 
+@dataclass(eq=False)
+class Grid:
+    # grid info
+    spacing: float = 0.001
+
+
 @dataclass
 class CfgBase:
     f915: CavItem = field(init=False)
     f2450: CavItem = field(init=False)
     dims: DimBase = field(default=DimBase())
     const: Constants = field(default=Constants())
+    grid: Grid = field(default=Grid())
 
 
 def make_cfg():
