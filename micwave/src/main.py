@@ -1,11 +1,9 @@
 import fdtd
 import numpy as np
 
-from functools import wraps
-
 from micwave.util.config import cfg
 from micwave.util.helpers import gpt
-from micwave.util.masks import mask_item, obj_on_grid
+from micwave.util.masks import mask_item, obj_on_grid, obj_indices
 
 
 class MicrowaveOven:
@@ -46,11 +44,9 @@ class MicrowaveOven:
     def obj_slices(self, dims):
         """Returns a tuple of slices, used for a creating a rectangle around an
         object to be placed in the oven"""
-        obj_x = slice(
-            gpt(dims.center[0]) - gpt(dims.r), gpt(dims.center[0]) + gpt(dims.r)
-        )
-        obj_y = slice(
-            gpt(dims.center[1]) - gpt(dims.r), gpt(dims.center[1]) + gpt(dims.r)
+        obj_x, obj_y = (
+            slice(gpt(dims.center[i]) - gpt(dims.r), gpt(dims.center[i]) + gpt(dims.r))
+            for i in range(2)
         )
         if dims.z is not None:
             # Cylindrical
@@ -68,10 +64,14 @@ class MicrowaveOven:
             dims = getattr(cfg.dims, obj)
             obj_rect = self.obj_slices(dims)
             obj_mask = mask_item(dims)
+
+            # Get the grid points of the objects and their indices
             self.obj_pos[obj] = obj_on_grid(
                 tuple(rect.start for rect in obj_rect),
                 obj_mask[:, :, :, 0],
             )
+            self.obj_indices[obj] = obj_indices(self.obj_pos[obj])
+
             obj_perm = obj_cond = np.ones(
                 (
                     self.slc_len(obj_rect[0]),
@@ -86,7 +86,7 @@ class MicrowaveOven:
             ### XXX Change this?? XXX
             obj_cond = obj_mask * (getattr(self.f_var, obj).sigma)
             # Add object to grid
-            self.grid[obj_rect[0], obj_rect[1], obj_rect[2]] = fdtd.AbsorbingObject(
+            self.grid[(*obj_rect,)] = fdtd.AbsorbingObject(
                 permittivity=obj_perm, conductivity=obj_cond, name=obj
             )
             if obj == "plate":
