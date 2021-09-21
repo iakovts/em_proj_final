@@ -6,7 +6,11 @@ from typing import Tuple
 
 FOODSTUFF_CFG = {
     915: {
-        "potato": {
+        "potato1": {
+            "er": 65,
+            "sigma": 1.02,
+        },
+        "potato2": {
             "er": 65,
             "sigma": 1.02,
         },
@@ -20,7 +24,11 @@ FOODSTUFF_CFG = {
         },
     },
     2450: {
-        "potato": {
+        "potato1": {
+            "er": 54,
+            "sigma": 2.18,
+        },
+        "potato2": {
             "er": 54,
             "sigma": 2.18,
         },
@@ -120,7 +128,11 @@ def make_cfg():
             food_tuple = (
                 obj,
                 CavItem,
-                field(default=CavItem(er=val["er"], sigma=val["sigma"], freq=freq)),
+                field(
+                    default=CavItem(
+                        er=val["er"], sigma=val["sigma"], freq=freq * 10 ** 6
+                    )
+                ),
             )
             foods_base.append(food_tuple)
         name = f"f{freq}"
