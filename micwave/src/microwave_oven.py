@@ -20,34 +20,38 @@ class MicrowaveOven:
         self.f_var = None  # Frequency dependent variables of objs
         self.obj_pos = {}  # Contains the grid points of objects
         self.obj_indices = {}  # Object indices, used for post-processing
-        self.source_power = 117  # Source power in (V/m)
+        self.source_power = 117.0  # Source power in (V/m)
         if self.freq == 915:
             self.f_var = cfg.f915
-            self.freq *= 10 ** 6
         else:
             self.f_var = cfg.f2450
-            self.freq *= 10 ** 6
+        self.freq *= 10 ** 6
 
     def add_boundaries(self):
         # fmt: off
-        self.grid[0: self.b_thickness, :, :] = fdtd.PML(name="pml_xlow")
-        self.grid[-self.b_thickness:, :, :] = fdtd.PML(name="pml_xhigh")
-        self.grid[:, 0: self.b_thickness, :] = fdtd.PML(name="pml_ylow")
-        self.grid[:, -self.b_thickness:, :] = fdtd.PML(name="pml_yhigh")
-        self.grid[:, :, 0: self.b_thickness] = fdtd.PML(name="pml_zlow")
-        self.grid[:, :, -self.b_thickness:] = fdtd.PML(name="pml_zhigh")
+        # self.grid[0: self.b_thickness, :, :] = fdtd.PeriodicBoundary(name="pml_xlow")
+        # self.grid[-self.b_thickness:, :, :] = fdtd.PeriodicBoundary(name="pml_xhigh")
+        # self.grid[:, 0: self.b_thickness, :] = fdtd.PeriodicBoundary(name="pml_ylow")
+        # self.grid[:, -self.b_thickness:, :] = fdtd.PeriodicBoundary(name="pml_yhigh")
+        # self.grid[:, :, 0: self.b_thickness] = fdtd.PeriodicBoundary(name="pml_zlow")
+        # self.grid[:, :, -self.b_thickness:] = fdtd.PeriodicBoundary(name="pml_zhigh")
+        self.grid[0, :, :] = fdtd.PeriodicBoundary(name="pml_xlow")
+        # self.grid[-1, :, :] = fdtd.PeriodicBoundary(name="pml_xhigh")
+        self.grid[:, 0, :] = fdtd.PeriodicBoundary(name="pml_ylow")
+        # self.grid[:, -1, :] = fdtd.PeriodicBoundary(name="pml_yhigh")
+        self.grid[:, :, 0] = fdtd.PeriodicBoundary(name="pml_zlow")
+        # self.grid[:, :, -1] = fdtd.PeriodicBoundary(name="pml_zhigh")
         self.min_height += self.b_thickness
         # fmt: on
 
     def add_source(self):
         # lower left corner of source on y-z plane
-        source_corner = (gpt(0.06), gpt(0.06))
+        source_corner = (gpt(0.01), gpt(0.01))
         # source_x = slice(self.b_thickness, gpt(cfg.dims.source.x))
         source_y = slice(source_corner[0], source_corner[0] + gpt(cfg.dims.source.y))
         source_z = slice(source_corner[1], source_corner[1] + gpt(cfg.dims.source.z))
-        print(type(source_y), type(source_z), type(self.b_thickness + 1))
-        self.grid[self.b_thickness: self.b_thickness + 1, source_y, source_z] = fdtd.PlaneSource(
-            period=(1 / self.freq), power=self.source_power
+        self.grid[self.b_thickness: self.b_thickness+1, source_y, source_z] = fdtd.PlaneSource(
+            period=(1 / self.freq), power=self.source_power, name="Source"
         )
 
     def add_objects(self):
@@ -72,7 +76,7 @@ class MicrowaveOven:
                 )
             )
             obj_perm += obj_mask * (
-                getattr(self.f_var, obj).er
+                getattr(self.f_var, obj).er - 1
             )  # Remove background permittivity
             ### XXX Change this?? XXX
             obj_cond = obj_mask * (getattr(self.f_var, obj).sigma)
@@ -101,6 +105,15 @@ class MicrowaveOven:
     def slc_len(self, slc):
         return int(slc.stop - slc.start)
 
+    def initialize(self):
+        self.add_boundaries()
+        self.add_source()
+        self.add_objects()
+
+    def run(self):
+        self.initialize()
+        self.grid.run(total_time=200)
+
 
 if __name__ == "__main__":
     oven = MicrowaveOven(915)
@@ -108,6 +121,6 @@ if __name__ == "__main__":
     oven.add_source()
     oven.add_objects()
     oven.grid.visualize(z=10, save=True, folder=os.getcwd())
-    oven.grid.run(total_time=500)
+    oven.grid.run(total_time=200)
 # # oven.grid.visualize(z=0)
 # oven.grid[1:100, 2:30, 4:10] = fdtd.AbsorbingObject()
