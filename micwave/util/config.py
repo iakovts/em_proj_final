@@ -50,6 +50,7 @@ class CavItem:
     sigma: float = 0
     freq: float = 0
     dens: float = field(default=1000)
+    power: float = field(default=117)  # Source Power (V/m)
 
 
 @dataclass(eq=False)
@@ -72,7 +73,7 @@ class DimensionsSpher:
 class DimBase:
     # All dimensions in m
     oven: DimensionsRect = field(default=DimensionsRect(x=0.17, y=0.17, z=0.15))
-    # wg: DimensionsRect = field(default=DimensionsRect(x=4.6, y=9.2, z=4.9))
+    source: DimensionsRect = field(default=DimensionsRect(x=0.046, y=0.092, z=0.049))
     burger: DimensionsSpher = field(default=DimensionsSpher(r=0.04, z=0.02))
     potato1: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
     potato2: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
