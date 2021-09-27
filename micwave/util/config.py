@@ -22,6 +22,10 @@ FOODSTUFF_CFG = {
             "er": 6,
             "sigma": 0.001,
         },
+        "air": {
+            "er": 1.0,
+            "sigma": 0,
+        },
     },
     2450: {
         "potato1": {
@@ -39,6 +43,10 @@ FOODSTUFF_CFG = {
         "plate": {
             "er": 6,
             "sigma": 0.001,
+        },
+        "air": {
+            "er": 1.0,
+            "sigma": 0,
         },
     },
 }
@@ -73,7 +81,8 @@ class DimensionsSpher:
 class DimBase:
     # All dimensions in m
     oven: DimensionsRect = field(default=DimensionsRect(x=0.17, y=0.17, z=0.15))
-    source: DimensionsRect = field(default=DimensionsRect(x=0.046, y=0.092, z=0.049))
+    # source: DimensionsRect = field(default=DimensionsRect(x=0.046, y=0.092, z=0.049))
+    source: DimensionsRect = field(default=DimensionsRect(x=0.06, y=0.05, z=0.15))
     burger: DimensionsSpher = field(default=DimensionsSpher(r=0.04, z=0.02))
     potato1: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
     potato2: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
@@ -110,6 +119,9 @@ class Constants:
 class Grid:
     # grid info
     spacing: float = 0.001
+    dt: float = 0
+    # Location of "lower left" corner of source (source on z-plane -> 'Roof')
+    src_corn: DimensionsRect = field(default=DimensionsRect(x=0.06, y=0.06, z=0.15))
 
 
 @dataclass
@@ -146,3 +158,6 @@ def make_cfg():
 
 
 cfg = make_cfg()
+cfg.grid.spacing = 0.001
+COURANT = .99 / np.sqrt(3)
+cfg.grid.dt = COURANT * cfg.grid.spacing / cfg.const.c
