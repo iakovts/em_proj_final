@@ -1,19 +1,26 @@
-import fdtd
 import numpy as np
 import os
 
+from collections import OrderedDict, defaultdict
+from dataclasses import asdict
+
+from matplotlib import pyplot as plt
+
+
 from micwave.util.config import cfg
-from micwave.util.helpers import gpt
+from micwave.util.helpers import (
+    gpt,
+    get_coefficients,
+    gaussian_source,
+    CustomDefDict,
+    vol,
+)
 from micwave.util.masks import mask_item, obj_on_grid, obj_indices
 
 
 class MicrowaveOven:
     def __init__(self, freq):
         self.foodstuff = ["plate", "burger", "potato1", "potato2"]
-        self.grid = fdtd.Grid(
-            (cfg.dims.oven.x, cfg.dims.oven.y, cfg.dims.oven.z),
-            grid_spacing=cfg.grid.spacing,
-        )
         self.min_height = 0  # Counter for z-axis current occupied height.
         self.b_thickness = 5  # Boundary thickness
         self.freq = freq
@@ -67,23 +74,6 @@ class MicrowaveOven:
             )
             self.obj_indices[obj] = obj_indices(self.obj_pos[obj])
 
-            obj_perm = obj_cond = np.ones(
-                (
-                    self.slc_len(obj_rect[0]),
-                    self.slc_len(obj_rect[1]),
-                    self.slc_len(obj_rect[2]),
-                    1,
-                )
-            )
-            obj_perm += obj_mask * (
-                getattr(self.f_var, obj).er - 1
-            )  # Remove background permittivity
-            ### XXX Change this?? XXX
-            obj_cond = obj_mask * (getattr(self.f_var, obj).sigma)
-            # Add object to grid
-            self.grid[(*obj_rect,)] = fdtd.AbsorbingObject(
-                permittivity=obj_perm, conductivity=obj_cond, name=obj
-            )
             if obj == "plate":
                 self.min_height += gpt(dims.z)
 
