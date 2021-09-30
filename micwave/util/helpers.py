@@ -86,10 +86,26 @@ def rotate_plate_clockwise(obj_center, origin, radians):
     """Rotates a set of (x, y) coordinates around a given origin"""
     x, y = obj_center
     offset_x, offset_y = origin
-    adjusted_x = (x - offset_x)
-    adjusted_y = (y - offset_y)
+    adjusted_x = x - offset_x
+    adjusted_y = y - offset_y
     cos_rad = np.cos(radians)
     sin_rad = np.sin(radians)
     qx = offset_x + cos_rad * adjusted_x + sin_rad * adjusted_y
     qy = offset_y + -sin_rad * adjusted_x + cos_rad * adjusted_y
     return (round(qx, 5), round(qy, 5))
+
+
+def nsetattr(base, path, value):
+    """Accept a dotted path to a nested attribute to set."""
+    path, _, target = path.rpartition(".")
+    for attrname in path.split("."):
+        base = getattr(base, attrname)
+    setattr(base, target, value)
+
+
+def print_tabular(x_headers, y_headers, text):
+    print("Printing Results...\n\n")
+    row_format = "{:>15.7}" * (len(y_headers) + 1)
+    print(row_format.format("AVG SAR", *y_headers))
+    for obj, row in zip(x_headers, text):
+        print(row_format.format(obj, *row))
