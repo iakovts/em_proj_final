@@ -1,7 +1,5 @@
 import numpy as np
 
-from micwave.util.config import cfg
-
 from micwave.util.helpers import gpt
 
 
