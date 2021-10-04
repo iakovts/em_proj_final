@@ -5,33 +5,38 @@ from micwave.src.microwave_oven import MicrowaveOven
 
 # from micwave.util.config import make_cfg
 import micwave.util.config as config
-from micwave.util.helpers import rotate_plate_clockwise, nsetattr, print_tabular
+from micwave.util.helpers import rotate_plate_clockwise, nsetattr, formatted_output
 
 
 def run(freq=None):
+    """Entrypoing for the simulation. Returns some useful data for visualization"""
     cfg = config.cfg
 
     if freq is None:
         parser = argparse.ArgumentParser()
-        parser.add_argument("-f", "--frequency", type=int, default=915, choices=[915, 2450])
+        parser.add_argument(
+            "-f", "--frequency", type=int, default=915, choices=[915, 2450]
+        )
         args = parser.parse_args()
         freq = args.frequency
 
-    oven = MicrowaveOven(freq, cfg)
+    oven = MicrowaveOven(freq, cfg)  # Used only to get `foodstuff` var here.
     angles = [i * (np.pi / 2) for i in range(4)]
     objects = oven.foodstuff[:]
     objects.remove("plate")
+
+    # Variables used for visualization later.
     total_sar = {}
     coef_snapshots = []
     E_snapshots = []
     for angle in angles:
         for obj in objects:
-            # Rotate all object taking as origin the center of the plate
+            # Rotate all objects taking as origin the center of the plate
             obj_cntr = rotate_plate_clockwise(
                 getattr(cfg.dims, obj).center, cfg.dims.plate.center, angle
             )
             nsetattr(cfg.dims, obj + ".center", obj_cntr)
-        oven = MicrowaveOven(args.frequency, cfg)
+        oven = MicrowaveOven(freq, cfg)
         print(
             f"Oven configuration: \nFrequency {oven.freq} Hz |"
             f" Source Power: {oven.source_power} V/m | dx = {cfg.grid.spacing} m | "
@@ -49,13 +54,4 @@ def run(freq=None):
 
 if __name__ == "__main__":
     sar, snap, E_snap, oven = run()
-    x_headers = list(sar[0.0].keys())
-    y_headers = list(sar.keys())
-    y_headers.extend(["μ", "σ", "σ/μ %"])
-    vals = [[d for d in sar[angl].values()] for angl in list(sar.keys())]
-    nvals = np.asarray(vals).T
-    mean_sar_obj = np.mean(nvals, axis=1)
-    std_obj = np.std(nvals, axis=1)
-    sigma_mi = 100 * std_obj / mean_sar_obj
-    total_vals = np.c_[nvals, mean_sar_obj, std_obj, sigma_mi]
-    print_tabular(x_headers, y_headers, total_vals)
+    formatted_output(sar)

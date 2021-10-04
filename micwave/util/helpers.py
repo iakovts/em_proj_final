@@ -109,3 +109,16 @@ def print_tabular(x_headers, y_headers, text):
     print(row_format.format("AVG SAR", *y_headers))
     for obj, row in zip(x_headers, text):
         print(row_format.format(obj, *row))
+
+
+def formatted_output(sar):
+    x_headers = list(sar[0.0].keys())
+    y_headers = list(sar.keys())
+    y_headers.extend(["μ", "σ", "σ/μ %"])
+    vals = [[d for d in sar[angl].values()] for angl in list(sar.keys())]
+    nvals = np.asarray(vals).T
+    mean_sar_obj = np.mean(nvals, axis=1)
+    std_obj = np.std(nvals, axis=1)
+    sigma_mi = 100 * std_obj / mean_sar_obj
+    total_vals = np.c_[nvals, mean_sar_obj, std_obj, sigma_mi]
+    print_tabular(x_headers, y_headers, total_vals)
