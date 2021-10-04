@@ -19,7 +19,6 @@ def run(freq=None):
 
     oven = MicrowaveOven(freq, cfg)
     angles = [i * (np.pi / 2) for i in range(4)]
-    angles = [0]
     objects = oven.foodstuff[:]
     objects.remove("plate")
     total_sar = {}
@@ -41,7 +40,7 @@ def run(freq=None):
             f"Current rotation angle: {np.degrees(angle)}.\n"
             "Starting Simulation..."
         )
-        oven._init()
+        oven.run()
         total_sar[np.degrees(angle)] = oven.sar
         coef_snapshots.append(oven.coef_fields)
         E_snapshots.append(oven.E)
