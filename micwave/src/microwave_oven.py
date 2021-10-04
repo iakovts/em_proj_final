@@ -1,13 +1,14 @@
+import copy
 import numpy as np
 
 from collections import OrderedDict
 from dataclasses import asdict
 
 from micwave.util.helpers import (
-    gpt,
-    get_coefficients,
-    gaussian_source,
     CustomDefDict,
+    gaussian_source,
+    get_coefficients,
+    gpt,
     vol,
 )
 from micwave.util.masks import mask_item, obj_on_grid, obj_indices
@@ -23,6 +24,7 @@ class MicrowaveOven:
         self.f_var = None  # Frequency dependent variables of objs
         self.obj_pos = {}  # Contains the grid points of objects
         self.obj_indices = {}  # Object indices, used for post-processing
+        self.obj_max_E = {}  # Holds arrays with the max values of E for objs
         self.source_power = 117.0  # Source power in (V/m)
         if self.freq == 915:
             self.f_var = self.cfg.f915
@@ -169,14 +171,9 @@ class MicrowaveOven:
             - self.E["y"][1:ib, :je, 1:ke]
         )
 
-    def update_source(self, N):
+    def update_source_gaussian(self, N):
         #### NOTE: NOT USED ####
         """Updates the source on the grid. `N` is the timestep"""
-        # rtau = 50.0e-12
-        # tau = rtau / self.cfg.grid.dt
-        # ndelay = 3 * tau
-        # src_const = self.cfg.grid.dt * 3.0e11
-
         src_pos_x = slice(
             gpt(self.cfg.grid.src_corn.x),
             gpt(self.cfg.grid.src_corn.x) + gpt(self.cfg.dims.source.x),
@@ -195,7 +192,7 @@ class MicrowaveOven:
             self.slc_len(src_pos_y),
         )
 
-    def update_source_2(self, N):
+    def update_source(self, N):
         """Updates the source on the grid. `N` is the timestep"""
         src_c = self.cfg.grid.src_corn  # Coordinates of source "lower-left" corner
         src_d = self.cfg.dims.source  # Dimensions of source
@@ -217,8 +214,8 @@ class MicrowaveOven:
     def calc_sar(self):
         for obj in self.foodstuff:
             total_E = 0
-            for energy in self.E.values():
-                obj_E = np.abs(energy[self.obj_indices[obj]]) ** 2
+            for energy in self.max_E.values():
+                obj_E = energy[self.obj_indices[obj]] ** 2
                 total_E += np.sum(obj_E)
             obj_vol = vol(getattr(self.cfg.dims, obj))
             self.sar[obj] = (
@@ -232,27 +229,53 @@ class MicrowaveOven:
         """Returns the length of a slice object"""
         return int(slc.stop - slc.start)
 
-    def _init(self):
-        self.init_grid()
-        self.init_fields()
-        self.init_space()
-        self.add_objects_in_field()
-        timesteps = 4 * int(
+    def calc_tot_E(self, obj):
+        """Calculates the total electric field E_0^2 for a given object"""
+        tot = 0
+        for val in list(self.E.values()):
+            tot += val[self.obj_indices[obj]] ** 2
+        return tot
+
+    def calc_tot_E_pt(self, pt):
+        """Calculates the total electric field E_0^2 for a given cell"""
+        tot = 0
+        for val in list(self.E.values()):
+            tot += val[(*pt,)] ** 2
+        return tot
+
+    def compare_E(self):
+        """Updates the maximum absolute value for each E field"""
+        for k, v in self.max_E.items():
+            self.max_E[k] = np.maximum(self.max_E[k], np.absolute(self.E[k]))
+
+    def run(self):
+        """Actually run the simulation"""
+        self._init()
+        timesteps = 2 * int(
             2
             * (self.cfg.dims.oven.x / self.wavelength)
             * self.period
             / self.cfg.grid.dt
         )
+        print(timesteps)
         self.track_this = np.zeros(timesteps)
         for N in range(timesteps):
-            # print(N)
             self.update_E()
-            self.update_source_2(N)
+            self.update_source(N)
             self.update_H()
-            self.track_this[N] = self.E["x"][30, 30, 30]
-            # print(100 * (track_target - np.abs(self.E["y"][50, 50, 50])/ np.abs(self.E["y"][50, 50, 50])))
-            # track_target = np.abs(self.E["y"][50, 50, 50])
+            self.track_this[N] = self.calc_tot_E_pt([50, 50, 50])
+            if N >= 800:
+                # Assume a steady state after 800 timesteps and
+                # start calculating maximums for E fields now.
+                self.compare_E()
         self.calc_sar()
+
+    def _init(self):
+        self.init_grid()
+        self.init_fields()
+        self.init_space()
+        self.add_objects_in_field()
+        self.max_E = copy.deepcopy(self.E)
 
 
 if __name__ == "__main__":
