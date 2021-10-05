@@ -196,22 +196,24 @@ class MicrowaveOven:
         """Updates the source on the grid. `N` is the timestep"""
         src_c = self.cfg.grid.src_corn  # Coordinates of source "lower-left" corner
         src_d = self.cfg.dims.source  # Dimensions of source
-        src_slc_x = slice(gpt(src_c.x), gpt(src_c.x) + gpt(src_d.x))
+
+        src_slc_x = gpt(src_c.x)
         src_slc_y = slice(gpt(src_c.y), gpt(src_c.y) + gpt(src_d.y))
-        src_slc_z = gpt(src_c.z)
-        x_pts = np.arange(src_c.x, src_c.x + src_d.x, self.cfg.grid.spacing)
+        src_slc_z = slice(gpt(src_c.z), gpt(src_c.z) + gpt(src_d.z))
+
         y_pts = np.arange(src_c.y, src_c.y + src_d.y, self.cfg.grid.spacing)
         omega = 2 * np.pi * self.freq
-        beta = 0
 
-        src_x = np.sin(np.pi * (x_pts - src_c.x) / src_d.x)
-        sin_part = np.transpose([src_x] * gpt(src_d.y))
-        cos_part = np.cos(omega * (N + 1) * self.cfg.grid.dt - beta * src_c.z)
+        src_y = np.sin(np.pi * (y_pts - src_c.y) / src_d.y)
+        sin_part = np.transpose([src_y] * gpt(src_d.z))
+        cos_part = np.cos(omega * (N + 1) * self.cfg.grid.dt)
         total = self.source_power * sin_part * cos_part
         self.heatmaps.append(total)
         self.E["y"][src_slc_x, src_slc_y, src_slc_z] = total
 
     def calc_sar(self):
+        """Calculates the SAR value for each object, based on the maximum
+        value of the fields in their respective voxels."""
         for obj in self.foodstuff:
             total_E = 0
             for energy in self.max_E.values():
@@ -237,16 +239,23 @@ class MicrowaveOven:
         return tot
 
     def calc_tot_E_pt(self, pt):
-        """Calculates the total electric field E_0^2 for a given cell"""
+        """Calculates the RSS total electric field for a given voxel"""
         tot = 0
         for val in list(self.E.values()):
             tot += val[(*pt,)] ** 2
-        return tot
+        return np.sqrt(tot)
 
     def compare_E(self):
         """Updates the maximum absolute value for each E field"""
         for k, v in self.max_E.items():
             self.max_E[k] = np.maximum(self.max_E[k], np.absolute(self.E[k]))
+
+    def _init(self):
+        self.init_grid()
+        self.init_fields()
+        self.init_space()
+        self.add_objects_in_field()
+        self.max_E = copy.deepcopy(self.E)
 
     def run(self):
         """Actually run the simulation"""
@@ -257,7 +266,7 @@ class MicrowaveOven:
             * self.period
             / self.cfg.grid.dt
         )
-        print(timesteps)
+        print("Total Timesteps: ", timesteps)
         self.track_this = np.zeros(timesteps)
         for N in range(timesteps):
             self.update_E()
@@ -269,15 +278,3 @@ class MicrowaveOven:
                 # start calculating maximums for E fields now.
                 self.compare_E()
         self.calc_sar()
-
-    def _init(self):
-        self.init_grid()
-        self.init_fields()
-        self.init_space()
-        self.add_objects_in_field()
-        self.max_E = copy.deepcopy(self.E)
-
-
-if __name__ == "__main__":
-    oven = MicrowaveOven(2450)
-    oven._init()

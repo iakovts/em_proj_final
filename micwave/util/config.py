@@ -81,7 +81,7 @@ class DimensionsSpher:
 class DimBase:
     # All dimensions in m
     oven: DimensionsRect = field(default=DimensionsRect(x=0.17, y=0.17, z=0.15))
-    source: DimensionsRect = field(default=DimensionsRect(x=0.06, y=0.05, z=0.15))
+    source: DimensionsRect = field(default=DimensionsRect(x=0.17, y=0.06, z=0.05))
     burger: DimensionsSpher = field(default=DimensionsSpher(r=0.04, z=0.02))
     potato1: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
     potato2: DimensionsSpher = field(default=DimensionsSpher(r=0.02))
@@ -119,8 +119,8 @@ class Grid:
     # grid info
     spacing: float = 0.001
     dt: float = 0
-    # Location of "lower left" corner of source (source on z-plane -> 'Roof')
-    src_corn: DimensionsRect = field(default=DimensionsRect(x=0.06, y=0.06, z=0.15))
+    # Location of "lower left" corner of source (source on z-y plane -> 'Side panel')
+    src_corn: DimensionsRect = field(default=DimensionsRect(x=0.17, y=0.1, z=0.09))
 
 
 @dataclass
