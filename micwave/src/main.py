@@ -15,7 +15,7 @@ def run(freq=None):
     if freq is None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            "-f", "--frequency", type=int, default=915, choices=[915, 2450]
+            "-f", "--frequency", type=int, default=915, choices=[915, 2450], required=False,
         )
         args = parser.parse_args()
         freq = args.frequency
