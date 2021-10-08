@@ -2,11 +2,11 @@
 from setuptools import find_packages, setup
 
 reqs = ["numpy", 'dataclasses;python_version<"3.7"']
-
+extra_reqs = {"pres": ["plotly", "jupyterlab"]}
 setup(
     name="micwave",
     version="1.0",
-    description="Methods and solutions Microwave Oven simulation",
+    description="Microwave Oven simulation",
     author="Iakovos Tsouros",
     packages=find_packages(include=["src*", "util*"]),
     python_requires=">3.6.*",
@@ -15,5 +15,6 @@ setup(
         "console_scripts": [
             "mic=micwave.src.main:run",
         ]
-    }
+    },
+    extras_require=extra_reqs,
 )

@@ -267,12 +267,12 @@ class MicrowaveOven:
             / self.cfg.grid.dt
         )
         print("Total Timesteps: ", timesteps)
-        self.track_this = np.zeros(timesteps)
+        self.track_steady = np.zeros(timesteps)
         for N in range(timesteps):
             self.update_E()
             self.update_source(N)
             self.update_H()
-            self.track_this[N] = self.calc_tot_E_pt([50, 50, 50])
+            self.track_steady[N] = self.calc_tot_E_pt([50, 50, 50])
             if N >= 800:
                 # Assume a steady state after 800 timesteps and
                 # start calculating maximums for E fields now.
