@@ -1,6 +1,8 @@
 import numpy as np
 import plotly.graph_objects as go
 
+from plotly.subplots import make_subplots
+
 from micwave.util.helpers import gpt
 
 
@@ -15,7 +17,6 @@ def draw_walls(fig):
             z=z,
             showscale=False,
             colorscale=bright_pink,
-            name="yolo",
         )
     )
     # y-wall
@@ -42,12 +43,65 @@ def draw_source(fig, cfg):
     y_pts = np.arange(gpt(oven_corner.y), gpt(oven_corner.y) + gpt(oven_dims.y))
     z_pts = np.arange(gpt(oven_corner.z), gpt(oven_corner.z) + gpt(oven_dims.z))
     y, z = np.meshgrid(y_pts, z_pts)
-    x = 169 * np.ones(y.shape)
+    x = 169 * np.ones(
+        y.shape
+    )  # For visibility purposes, the source is a grid point "outside" its pos
     fig.add_trace(go.Surface(x=x, y=y, z=z, showscale=False, colorscale=bright_blue))
+
+
+def draw_steady(oven_data):
+    # fig = go.Figure(go.Scatter(x=np.arange(len(data)), y=data, mode="lines"))
+    fig = go.Figure()
+    for oven in oven_data:
+        fig.add_trace(
+            go.Scatter(
+                x=np.arange(len(oven.track_steady)),
+                y=oven.track_steady,
+                mode="lines",
+                name=f"f={oven.freq / 10 ** 6:.0f}MHz",
+            )
+        )
+    # Add a line at x=800
+    fig.add_trace(go.Scatter(x=[800, 800], y=[0, 20]))
+    fig.update_layout(
+        title=f"Electric Fields RSS at (50, 50, 50) over all timesteps.",
+        yaxis_title="$E_{RSS}$ V/m",
+        xaxis_title="timesteps",
+    )
+    return fig
+
+
+def draw_source_snap(source_snap):
+    snap_N = len(source_snap[0])
+    freqs = [915, 2450]
+    N = [10, 120, 250]
+    subp_titles = []
+    for i in N:
+        subp_titles.extend([f"f={freq} N={i}" for freq in freqs])
+    fig = make_subplots(rows=3, cols=2, subplot_titles=subp_titles, shared_yaxes=True)
+    for j in range(3):
+        for i in range(2):
+            fig.add_trace(
+                go.Heatmap(
+                    z=source_snap[i][N[j]].T,
+                    coloraxis="coloraxis",
+                    colorbar={"title": "V/m"},
+                ),
+                row=j + 1,
+                col=i + 1,
+            )
+    fig.update_layout(
+        title="Source Snapshots for different frequencies and timesteps",
+        coloraxis={"colorscale": "Inferno"},
+    )
+    fig.update_xaxes(title_text="y")
+    fig.update_yaxes(title_text="z")
+    return fig
 
 
 def update_layout_grid(fig):
     fig.update_layout(
+        title="Microwave Oven Layout before rotations",
         scene=dict(
             xaxis=dict(
                 nticks=20,
