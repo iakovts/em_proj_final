@@ -1,9 +1,8 @@
-import numpy as np
 import argparse
+import numpy as np
 
 from micwave.src.microwave_oven import MicrowaveOven
 
-# from micwave.util.config import make_cfg
 import micwave.util.config as config
 from micwave.util.helpers import rotate_plate_clockwise, nsetattr, formatted_output
 
@@ -20,36 +19,41 @@ def run(freq=None):
         args = parser.parse_args()
         freq = args.frequency
 
-    oven = MicrowaveOven(freq, cfg)  # Used only to get `foodstuff` var here.
-    angles = [i * (np.pi / 2) for i in range(4)]
+    oven = MicrowaveOven(freq)  # Used only to get `foodstuff` var here.
+    angle = np.pi / 2  # Since the center positions are saved, always rotate by 90
     objects = oven.foodstuff[:]
     objects.remove("plate")
 
     # Variables used for visualization later.
     total_sar = {}
-    coef_snapshots = []
-    E_snapshots = []
-    for angle in angles:
+    ovens = []
+    rot_count = 0
+
+    # Rotate 3 times
+    for _ in range(4):
         for obj in objects:
+
             # Rotate all objects taking as origin the center of the plate
-            obj_cntr = rotate_plate_clockwise(
-                getattr(cfg.dims, obj).center, cfg.dims.plate.center, angle
-            )
-            nsetattr(cfg.dims, obj + ".center", obj_cntr)
-        oven = MicrowaveOven(freq, cfg)
+            if rot_count != 0:
+                obj_cntr = rotate_plate_clockwise(
+                    getattr(cfg.dims, obj).center, cfg.dims.plate.center, angle
+                )
+                nsetattr(cfg.dims, obj + ".center", obj_cntr)
+        oven = MicrowaveOven(freq)
         print(
             f"Oven configuration: \nFrequency {oven.freq} Hz |"
             f" Source Power: {oven.source_power} V/m | dx = {cfg.grid.spacing} m | "
             f" dt = {cfg.grid.dt} s |"
             f" Oven dimensions (x, y, z) = {cfg.dims.oven.x, cfg.dims.oven.y, cfg.dims.oven.z}m | "
-            f"Current rotation angle: {np.degrees(angle)}.\n"
+            f"Current rotation angle: {np.degrees(angle) * rot_count}.\n"
             "Starting Simulation..."
         )
         oven.run()
-        total_sar[np.degrees(angle)] = oven.sar
-        coef_snapshots.append(oven.coef_fields)
-        E_snapshots.append(oven.E)
-    return total_sar, coef_snapshots, E_snapshots, oven
+        total_sar[np.degrees(angle) * rot_count] = oven.sar
+        ovens.append(oven)
+        rot_count += 1
+
+    return total_sar, ovens
 
 
 if __name__ == "__main__":
