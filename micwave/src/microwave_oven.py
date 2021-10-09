@@ -4,6 +4,7 @@ import numpy as np
 from collections import OrderedDict
 from dataclasses import asdict
 
+from micwave.util.config import cfg
 from micwave.util.helpers import (
     CustomDefDict,
     gaussian_source,
@@ -15,8 +16,8 @@ from micwave.util.masks import mask_item, obj_on_grid, obj_indices
 
 
 class MicrowaveOven:
-    def __init__(self, freq, cfg):
-        self.cfg = cfg
+    def __init__(self, freq):
+        # cfg = cfg
         self.foodstuff = ["plate", "burger", "potato1", "potato2"]
         self.min_height = 1  # Counter for z-axis current occupied height.
         self.b_thickness = 5  # Boundary thickness
@@ -27,18 +28,20 @@ class MicrowaveOven:
         self.obj_max_E = {}  # Holds arrays with the max values of E for objs
         self.source_power = 117.0  # Source power in (V/m)
         if self.freq == 915:
-            self.f_var = self.cfg.f915
+            self.f_var = cfg.f915
         else:
-            self.f_var = self.cfg.f2450
+            self.f_var = cfg.f2450
         self.coef = get_coefficients(self.freq)
         self.freq *= 10 ** 6
-        self.wavelength = self.cfg.const.c / self.freq
+        self.wavelength = cfg.const.c / self.freq
         self.period = 1 / self.freq
         self.sar = {}
         self.heatmaps = []
 
     def init_grid(self):
-        self.grid_dims = {k: gpt(v) for k, v in asdict(self.cfg.dims.oven).items()}
+        """Transform simulation space dimensions to grid points based on
+        grid spacing."""
+        self.grid_dims = {k: gpt(v) for k, v in asdict(cfg.dims.oven).items()}
         self.Nx, self.Ny, self.Nz = (
             self.grid_dims["x"],
             self.grid_dims["y"],
@@ -46,6 +49,7 @@ class MicrowaveOven:
         )
 
     def init_fields(self):
+        """Initialize E and H fields to 0."""
         self.E = OrderedDict()
         self.E["x"] = np.zeros((self.Nx, self.Ny + 1, self.Nz + 1))
         self.E["y"] = np.zeros((self.Nx + 1, self.Ny, self.Nz + 1))
@@ -57,8 +61,7 @@ class MicrowaveOven:
         self.H["z"] = np.zeros((self.Nx, self.Ny, self.Nz + 1))
 
     def init_space(self):
-        """Initializes the space of the simulation taking into account the
-        coefficients in its grid, with objects included"""
+        """Initialize coefficient fields."""
         self.coef_fields = OrderedDict()
         for c in ["caE", "cbE", "daH", "dbH"]:
             self.coef_fields[c] = self.coef[c[:-1]]["air"] * np.ones(
@@ -74,7 +77,7 @@ class MicrowaveOven:
 
     def add_objects(self):
         for obj in self.foodstuff:
-            dims = getattr(self.cfg.dims, obj)
+            dims = getattr(cfg.dims, obj)
             obj_rect = self.obj_slices(dims)
             obj_mask = mask_item(dims)
 
@@ -90,7 +93,7 @@ class MicrowaveOven:
 
     def obj_slices(self, dims):
         """Returns a tuple of slices, used for a creating a rectangle around an
-        object to be placed in the oven"""
+        object to be placed in the oven. Used for masking."""
         obj_x, obj_y = (
             slice(gpt(dims.center[i]) - gpt(dims.r), gpt(dims.center[i]) + gpt(dims.r))
             for i in range(2)
@@ -175,14 +178,14 @@ class MicrowaveOven:
         #### NOTE: NOT USED ####
         """Updates the source on the grid. `N` is the timestep"""
         src_pos_x = slice(
-            gpt(self.cfg.grid.src_corn.x),
-            gpt(self.cfg.grid.src_corn.x) + gpt(self.cfg.dims.source.x),
+            gpt(cfg.grid.src_corn.x),
+            gpt(cfg.grid.src_corn.x) + gpt(cfg.dims.source.x),
         )
         src_pos_y = slice(
-            gpt(self.cfg.grid.src_corn.y),
-            gpt(self.cfg.grid.src_corn.y) + gpt(self.cfg.dims.source.y),
+            gpt(cfg.grid.src_corn.y),
+            gpt(cfg.grid.src_corn.y) + gpt(cfg.dims.source.y),
         )
-        src_pos_z = gpt(self.cfg.grid.src_corn.z) - 1
+        src_pos_z = gpt(cfg.grid.src_corn.z) - 1
         self.E["y"][
             src_pos_x, src_pos_y, src_pos_z
         ] = self.source_power * gaussian_source(
@@ -194,19 +197,19 @@ class MicrowaveOven:
 
     def update_source(self, N):
         """Updates the source on the grid. `N` is the timestep"""
-        src_c = self.cfg.grid.src_corn  # Coordinates of source "lower-left" corner
-        src_d = self.cfg.dims.source  # Dimensions of source
+        src_c = cfg.grid.src_corn  # Coordinates of source "lower-left" corner
+        src_d = cfg.dims.source  # Dimensions of source
 
         src_slc_x = gpt(src_c.x)
         src_slc_y = slice(gpt(src_c.y), gpt(src_c.y) + gpt(src_d.y))
         src_slc_z = slice(gpt(src_c.z), gpt(src_c.z) + gpt(src_d.z))
 
-        y_pts = np.arange(src_c.y, src_c.y + src_d.y, self.cfg.grid.spacing)
+        y_pts = np.arange(src_c.y, src_c.y + src_d.y, cfg.grid.spacing)
         omega = 2 * np.pi * self.freq
 
         src_y = np.sin(np.pi * (y_pts - src_c.y) / src_d.y)
         sin_part = np.transpose([src_y] * gpt(src_d.z))
-        cos_part = np.cos(omega * (N + 1) * self.cfg.grid.dt)
+        cos_part = np.cos(omega * (N + 1) * cfg.grid.dt)
         total = self.source_power * sin_part * cos_part
         self.heatmaps.append(total)
         self.E["y"][src_slc_x, src_slc_y, src_slc_z] = total
@@ -219,12 +222,12 @@ class MicrowaveOven:
             for energy in self.max_E.values():
                 obj_E = energy[self.obj_indices[obj]] ** 2
                 total_E += np.sum(obj_E)
-            obj_vol = vol(getattr(self.cfg.dims, obj))
+            obj_vol = vol(getattr(cfg.dims, obj))
             self.sar[obj] = (
                 (1 / obj_vol)
                 * getattr(self.f_var, obj).sigma
                 * total_E
-                * self.cfg.grid.spacing ** 3
+                * cfg.grid.spacing ** 3
             ) / (getattr(self.f_var, obj).dens)
 
     def slc_len(self, slc):
@@ -262,9 +265,9 @@ class MicrowaveOven:
         self._init()
         timesteps = 2 * int(
             2
-            * (self.cfg.dims.oven.x / self.wavelength)
+            * (cfg.dims.oven.x / self.wavelength)
             * self.period
-            / self.cfg.grid.dt
+            / cfg.grid.dt
         )
         print("Total Timesteps: ", timesteps)
         self.track_steady = np.zeros(timesteps)
