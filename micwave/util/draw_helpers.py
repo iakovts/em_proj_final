@@ -99,6 +99,52 @@ def draw_source_snap(source_snap):
     return fig
 
 
+def draw_E(E, offset, f, Eaxis="y", draw_plane="z", is_max=False):
+    """Draws a heatmap of the Electric fields. Can draw all planes and E-axis or E-RSS.
+    Args:
+    - E -> list: List of dictionaries containing the electric field values.
+    - offset -> int : plane 'distance' from 0.
+    - f -> str : frequncy, only used for title.
+    - Eaxis -> str: 'x', 'y', 'z' or 'rss'. Electric field axis to take into account
+    - draw_plane -> str : View plane
+    - is_max -> bool : If E_max fields are provided, change title."""
+    plane_dict = {"x": 0, "y": 1, "z": 2}
+    slc = tuple(
+        [offset if idx == plane_dict[draw_plane] else slice(None) for idx in range(3)]
+    )
+    N = [0, 90, 180, 270]
+    subp_titles = [f"f={f}MHz angle={i} z={offset}" for i in N]
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=subp_titles,
+        shared_yaxes=True,
+    )
+    cnt = 0
+    E_val = lambda cnt: E[cnt][Eaxis] if Eaxis != "rss" else total_E(E[cnt])
+    for j in range(2):
+        for i in range(2):
+            fig.add_trace(
+                go.Heatmap(
+                    z=E_val(cnt)[slc].T,
+                    coloraxis="coloraxis",
+                    colorbar={"title": "V/m"},
+                ),
+                row=j + 1,
+                col=i + 1,
+            )
+            cnt += 1
+
+    title = f"E_{Eaxis} view for different angles at {draw_plane}={offset} plane"
+    if is_max:
+        title += " and max E values for field used for calculating SAR"
+    fig.update_layout(
+        title=f"E_{Eaxis} view for different angles at {draw_plane}={offset} plane",
+        coloraxis={"colorscale": "Inferno"},
+    )
+    return fig
+
+
 def update_layout_grid(fig):
     fig.update_layout(
         title="Microwave Oven Layout before rotations",
@@ -119,3 +165,11 @@ def update_layout_grid(fig):
         width=700,
         margin=dict(r=20, l=10, b=10, t=10),
     )
+
+
+def total_E(E):
+    # RSS total electric field
+    tot = 0
+    for k, val in list(E.items()):
+        tot += val[:170, :170, :150] ** 2
+    return np.sqrt(tot)
