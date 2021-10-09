@@ -105,7 +105,7 @@ def nsetattr(base, path, value):
 
 def print_tabular(x_headers, y_headers, text):
     print("Printing Results...\n\n")
-    row_format = "{:>15.7}" * (len(y_headers) + 1)
+    row_format = "{:>13.7}" * (len(y_headers) + 1)
     print(row_format.format("AVG SAR", *y_headers))
     for obj, row in zip(x_headers, text):
         print(row_format.format(obj, *row))
