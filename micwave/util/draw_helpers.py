@@ -119,6 +119,7 @@ def draw_E(E, offset, f, Eaxis="y", draw_plane="z", is_max=False):
         cols=2,
         subplot_titles=subp_titles,
         shared_yaxes=True,
+        shared_xaxes=True,
     )
     cnt = 0
     E_val = lambda cnt: E[cnt][Eaxis] if Eaxis != "rss" else total_E(E[cnt])
@@ -133,6 +134,8 @@ def draw_E(E, offset, f, Eaxis="y", draw_plane="z", is_max=False):
                 row=j + 1,
                 col=i + 1,
             )
+            fig.update_xaxes(scaleanchor="y", scaleratio=1, row=j+1, col=i+1)
+            fig.update_layout(height=800, width=800)
             cnt += 1
 
     title = f"E_{Eaxis} view for different angles at {draw_plane}={offset} plane"
