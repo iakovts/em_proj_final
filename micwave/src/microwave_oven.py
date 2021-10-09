@@ -107,6 +107,7 @@ class MicrowaveOven:
         return (obj_x, obj_y, obj_z)
 
     def update_E(self):
+        """Update E fields using FDTD equations"""
         ie, je, ke, = (
             self.Nx,
             self.Ny,
@@ -141,6 +142,7 @@ class MicrowaveOven:
         )
 
     def update_H(self):
+        """Update H fields using FDTD equations"""
         ie, je, ke, = (
             self.Nx,
             self.Ny,
@@ -172,27 +174,6 @@ class MicrowaveOven:
             - self.E["x"][:ie, :je, 1:ke]
             + self.E["y"][:ie, :je, 1:ke]
             - self.E["y"][1:ib, :je, 1:ke]
-        )
-
-    def update_source_gaussian(self, N):
-        #### NOTE: NOT USED ####
-        """Updates the source on the grid. `N` is the timestep"""
-        src_pos_x = slice(
-            gpt(cfg.grid.src_corn.x),
-            gpt(cfg.grid.src_corn.x) + gpt(cfg.dims.source.x),
-        )
-        src_pos_y = slice(
-            gpt(cfg.grid.src_corn.y),
-            gpt(cfg.grid.src_corn.y) + gpt(cfg.dims.source.y),
-        )
-        src_pos_z = gpt(cfg.grid.src_corn.z) - 1
-        self.E["y"][
-            src_pos_x, src_pos_y, src_pos_z
-        ] = self.source_power * gaussian_source(
-            self.slc_len(src_pos_x),
-            self.slc_len(src_pos_y),
-            10,
-            self.slc_len(src_pos_y),
         )
 
     def update_source(self, N):
