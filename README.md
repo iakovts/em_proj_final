@@ -47,3 +47,7 @@ mic [-f/--frequency 915/2450]
 # OR
 python micwave/src/main.py [-f/--frequency 915/2450]
 ```
+<h4> Rendered Notebook in html </h4>
+
+To view the notebook rendered in html (including computational results), open the `TsourosReport.html` file in a browser that supports javascript. This file can be found in the `TsourosReport` directory from the project's root.
+
